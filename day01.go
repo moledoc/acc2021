@@ -67,7 +67,7 @@ func problem02(input map[int]int) (increased int) {
 func main() {
 	_ = sample
 	// read input
-	input := readFile("input.txt")
+	input := readFile("input01.txt")
 	// 01
 	fmt.Printf("Problem 01: %v\n", problem01(input))
 	// 02
