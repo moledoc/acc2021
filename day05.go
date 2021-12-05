@@ -62,11 +62,14 @@ func problem1() int {
 		if err != nil {
 			log.Fatal(err)
 		}
+		xdiff := abs(x2 - x1)
+		ydiff := abs(y2 - y1)
+		diff := max(xdiff, ydiff)
+		x := (x2 - x1) / diff
+		y := (y2 - y1) / diff
 		if x1 == x2 || y1 == y2 {
-			for x := min(x1, x2); x <= max(x1, x2); x++ {
-				for y := min(y1, y2); y <= max(y1, y2); y++ {
-					pointsCounter[x+1000*y]++
-				}
+			for i := 0; i <= diff; i++ {
+				pointsCounter[(x1+i*x)+1000*(y1+i*y)]++
 			}
 		}
 	}
