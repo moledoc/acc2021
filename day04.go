@@ -76,7 +76,6 @@ func bingo(scanner *bufio.Scanner, numbers []int) bingoInfo {
 							unmarkedSum: unmarkedSum,
 						}
 					}
-					break
 				}
 			}
 		}
