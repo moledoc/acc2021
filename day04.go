@@ -9,92 +9,82 @@ import (
 	"strings"
 )
 
-// NB This code is not particularly well written nor efficient.
-// Unfortunately I don't have too much time, so working solution is the nr 1 priority.
+type bingoInfo struct {
+	lastNr, lastNrInd, unmarkedSum int
+}
 
 func parseNumbers(scanner *bufio.Scanner) (numbers []int) {
 	if scanner.Scan() {
 		line := strings.Split(scanner.Text(), ",")
-		for _, elem := range line {
+		numbers = make([]int, len(line))
+		for i, elem := range line {
 			nr, err := strconv.Atoi(elem)
 			if err != nil {
 				log.Fatal(err)
 			}
-			numbers = append(numbers, nr)
+			numbers[i] = nr
 		}
 	}
 	return numbers
 }
 
-func parseBoard(scanner *bufio.Scanner) map[int][]int {
-	board := make(map[int][]int)
-	var row int
-	for scanner.Scan() {
-		lineStr := scanner.Text()
-		var line []int
-		for _, elem := range strings.Split(lineStr, " ") {
+func bingo(scanner *bufio.Scanner, numbers []int) bingoInfo {
+	board := [5][5]int{
+		{0, 0, 0, 0, 0},
+		{0, 0, 0, 0, 0},
+		{0, 0, 0, 0, 0},
+		{0, 0, 0, 0, 0},
+		{0, 0, 0, 0, 0},
+	}
+	// for each row/col, keep counter: index 0 = row, index 1 = col
+	counter := [5][2]int{
+		{0, 0},
+		{0, 0},
+		{0, 0},
+		{0, 0},
+		{0, 0},
+	}
+	var unmarkedSum int
+	// read in board
+	for i := 0; i < 5 && scanner.Scan(); i++ {
+		var colInd int
+		for _, elem := range strings.Split(scanner.Text(), " ") {
 			if elem == "" {
 				continue
 			}
-			elemInt, err := strconv.Atoi(elem)
+			nr, err := strconv.Atoi(elem)
 			if err != nil {
 				log.Fatal(err)
 			}
-			line = append(line, elemInt)
-		}
-		for i, elem := range line {
-			// rows
-			board[row] = append(board[row], elem)
-			// cols
-			board[5+i] = append(board[5+i], elem)
-		}
-		row++
-		if row == 5 {
-			break
+			board[i][colInd] = nr
+			colInd++
+			unmarkedSum += nr
 		}
 	}
-	return board
-}
-
-func findWinning(boards map[int]map[int][]int, numbers []int, findFirst bool) (map[int][]int, int, map[int]int) {
-	counter := make(map[int]map[int]int)
-	for i := 0; i < len(boards); i++ {
-		tmp := make(map[int]int)
-		for j := 0; j < len(boards[i]); j++ {
-			tmp[j] = 0
-		}
-		counter[i] = tmp
-	}
-	ranking := make(map[int]int, len(boards))
-	var rank int
-	var board map[int][]int
-	for last, nr := range numbers {
-		for i, board := range boards {
-			for j, boardRow := range board {
-				for _, elem := range boardRow {
-					if elem == nr {
-						counter[i][j] += 1
-						if counter[i][j] == 5 {
-							if findFirst {
-								return board, last, ranking
-							}
-							if _, ok := ranking[i]; !ok {
-								ranking[i] = rank
-							}
-							rank++
-							if len(ranking) == len(boards) {
-								return board, last, ranking
-							}
+	// find when board wins
+	for i := 0; i < len(numbers); i++ {
+		for row := 0; row < 5; row++ {
+			for col := 0; col < 5; col++ {
+				if numbers[i] == board[row][col] {
+					unmarkedSum -= numbers[i]
+					counter[row][0]++
+					counter[col][1]++
+					if counter[row][0] == 5 || counter[col][1] == 5 {
+						return bingoInfo{
+							lastNr:      numbers[i],
+							lastNrInd:   i,
+							unmarkedSum: unmarkedSum,
 						}
 					}
+					break
 				}
 			}
 		}
 	}
-	return board, -1, ranking
+	return bingoInfo{}
 }
 
-func problem1() int {
+func problem() (int, int) {
 	file, err := os.Open("input04.txt")
 	defer file.Close()
 	if err != nil {
@@ -103,82 +93,30 @@ func problem1() int {
 	scanner := bufio.NewScanner(file)
 	// get numbers
 	numbers := parseNumbers(scanner)
-	// get boards
-	var boardNr int
-	boards := make(map[int]map[int][]int)
+	// get each board bingo info
+	var bingos []bingoInfo
 	for scanner.Scan() {
-		boards[boardNr] = parseBoard(scanner)
-		boardNr++
+		bingos = append(bingos, bingo(scanner, numbers))
 	}
-	// find winning board
-	winningBoard, lastNrInd, _ := findWinning(boards, numbers, true)
-	// insert used in a map
-	usedNr := make(map[int]bool)
-	for i := 0; i <= lastNrInd; i++ {
-		usedNr[numbers[i]] = true
-	}
-	// find not used elems
-	var unmarked int
-	for i := 0; i < 5; i++ {
-		// rows end with index 4
-		// since columns contain the same numbers as rows,
-		// then summing them would double our result
-		for _, elem := range winningBoard[i] {
-			if _, ok := usedNr[elem]; ok {
-				continue
-			}
-			unmarked += elem
+	// get the first and last winner results
+	var first int = len(numbers)
+	var last int
+	var firstWin int
+	var lastWin int
+	for _, bingo := range bingos {
+		if first > bingo.lastNrInd {
+			first = bingo.lastNrInd
+			firstWin = bingo.lastNr * bingo.unmarkedSum
+		}
+		if last < bingo.lastNrInd {
+			last = bingo.lastNrInd
+			lastWin = bingo.lastNr * bingo.unmarkedSum
 		}
 	}
-	return unmarked * numbers[lastNrInd]
-}
-
-func problem2() int {
-	file, err := os.Open("input04.txt")
-	defer file.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
-	scanner := bufio.NewScanner(file)
-	// get numbers
-	numbers := parseNumbers(scanner)
-	// get boards
-	var boardNr int
-	boards := make(map[int]map[int][]int)
-	for scanner.Scan() {
-		boards[boardNr] = parseBoard(scanner)
-		boardNr++
-	}
-	// find last winning board
-	winningBoard, lastNrInd, ranking := findWinning(boards, numbers, false)
-	for i := 0; i < len(boards); i++ {
-		if ranking[i] == len(boards)-1 {
-			winningBoard = boards[i]
-			break
-		}
-	}
-	// insert used in a map
-	usedNr := make(map[int]bool)
-	for i := 0; i <= lastNrInd; i++ {
-		usedNr[numbers[i]] = true
-	}
-	// find not used elems
-	var unmarked int
-	for i := 0; i < 5; i++ {
-		// rows end with index 4
-		// since columns contain the same numbers as rows,
-		// then summing them would double our result
-		for _, elem := range winningBoard[i] {
-			if _, ok := usedNr[elem]; ok {
-				continue
-			}
-			unmarked += elem
-		}
-	}
-	return unmarked * numbers[lastNrInd]
+	return firstWin, lastWin
 }
 
 func main() {
-	fmt.Printf("Problem 1: %v\n", problem1())
-	fmt.Printf("Problem 2: %v\n", problem2())
+	problem1, problem2 := problem()
+	fmt.Printf("Problem 1: %v\nProblem 2: %v\n", problem1, problem2)
 }
