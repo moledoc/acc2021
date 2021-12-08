@@ -40,10 +40,6 @@ func sortStr(str string) string {
 	return strings.Join(s, "")
 }
 
-func mapLetters() {
-
-}
-
 // Could use some refactoring, but currently will not do it.
 func problem2() (sum int) {
 	file, err := os.Open("input08.txt")
