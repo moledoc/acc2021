@@ -82,9 +82,7 @@ func problem2() (fuel int) {
 		var fuelTmp int
 		for _, elem := range positions {
 			step := abs(elem - i)
-			for j := 1; j <= step; j++ {
-				fuelTmp += j
-			}
+			fuelTmp += step * (1 + step) / 2 // arihmetic progression
 		}
 		if fuel == 0 || fuelTmp < fuel {
 			fuel = fuelTmp
