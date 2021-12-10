@@ -48,19 +48,19 @@ func problem1() (score int) {
 	check(err)
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		var lifo []string
+		var filo []string
 		for _, elem := range strings.Split(scanner.Text(), "") {
 			errPt, ok := errScore[elem]
 			if ok {
-				if lastOpened := lifo[len(lifo)-1]; mappingClose[elem] != lastOpened {
+				if lastOpened := filo[len(filo)-1]; mappingClose[elem] != lastOpened {
 					score += errPt
 					break
 				} else {
-					lifo = lifo[:len(lifo)-1]
+					filo = filo[:len(filo)-1]
 					continue
 				}
 			}
-			lifo = append(lifo, elem)
+			filo = append(filo, elem)
 		}
 	}
 	return score
@@ -74,27 +74,27 @@ func problem2() int {
 	var compScores []int
 	for scanner.Scan() {
 		var syntaxErr bool
-		var lifo []string
+		var filo []string
 		for _, elem := range strings.Split(scanner.Text(), "") {
 			_, ok := errScore[elem]
 			if ok {
-				if lastOpened := lifo[len(lifo)-1]; mappingClose[elem] != lastOpened {
+				if lastOpened := filo[len(filo)-1]; mappingClose[elem] != lastOpened {
 					syntaxErr = true
 					break
 				} else {
-					lifo = lifo[:len(lifo)-1]
+					filo = filo[:len(filo)-1]
 					continue
 				}
 			}
-			lifo = append(lifo, elem)
+			filo = append(filo, elem)
 		}
 		if syntaxErr {
 			continue
 		}
 		var score int
-		for len(lifo) > 0 {
-			score = score*5 + acScore[mappingOpen[lifo[len(lifo)-1]]]
-			lifo = lifo[:len(lifo)-1]
+		for len(filo) > 0 {
+			score = score*5 + acScore[mappingOpen[filo[len(filo)-1]]]
+			filo = filo[:len(filo)-1]
 		}
 		compScores = append(compScores, score)
 	}
