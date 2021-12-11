@@ -10,6 +10,10 @@ import (
 	"strings"
 )
 
+// Could make improvements, so I wouldn't need the unnecessary padding.
+// See day11 solution for inspiration.
+// However, atm I'm not going to make these changes.
+
 func check(err error) {
 	if err != nil {
 		log.Fatal(err)
@@ -75,12 +79,12 @@ func makeVisited(row int, col int) [][]bool {
 	return visited
 }
 
-// func showVisited(visited [][]bool) {
-// 	fmt.Println()
-// 	for i := 0; i < len(visited); i++ {
-// 		fmt.Println(visited[i])
-// 	}
-// }
+func showVisited(visited [][]bool) {
+	fmt.Println()
+	for i := 0; i < len(visited); i++ {
+		fmt.Println(visited[i])
+	}
+}
 
 // currently overcounts
 func findBasinSize(heightmap [][]int, row int, col int, count int, visited [][]bool) (int, [][]bool) {
@@ -111,6 +115,7 @@ func problem2() int {
 	check(err)
 	scanner := bufio.NewScanner(file)
 	heightmap := makeHeightmap(scanner)
+	visited := makeVisited(len(heightmap), len(heightmap[0]))
 	var basinSizes []int
 	for row := 1; row < len(heightmap)-1; row++ {
 		for col := 1; col < len(heightmap[row])-1; col++ {
@@ -118,14 +123,14 @@ func problem2() int {
 				heightmap[row][col] < heightmap[row][col-1] &&
 				heightmap[row][col] < heightmap[row+1][col] &&
 				heightmap[row][col] < heightmap[row-1][col] {
-				visited := makeVisited(len(heightmap), len(heightmap[0]))
 				visited[row][col] = true
-				basinSize, visited := findBasinSize(heightmap, row, col, 1, visited)
-				// 				showVisited(visited)
+				var basinSize int
+				basinSize, visited = findBasinSize(heightmap, row, col, 1, visited)
 				basinSizes = append(basinSizes, basinSize)
 			}
 		}
 	}
+	// 	showVisited(visited)
 	sort.Ints(basinSizes)
 	basinsLen := len(basinSizes)
 	basins := 1
