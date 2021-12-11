@@ -32,27 +32,30 @@ func makeFlashed() [][]bool {
 	return flashed
 }
 
+var sur []int = []int{
+	1, 0, // row + 1, col,
+	1, 1, // row + 1, col
+	1, -1, // row + 1, col
+	-1, 0, // row - 1, col,
+	-1, 1, // row - 1, col
+	-1, -1, // row - 1, col
+	0, 1, // row, col + 1,
+	0, -1, // row, col - 1,
+}
+
 func flashSimu(octomap [][]int, row int, col int, flashed [][]bool, count int) ([][]int, int, [][]bool) {
 	octomap[row][col] = 0
-	var sur []int = []int{
-		row + 1, col,
-		row + 1, col + 1,
-		row + 1, col - 1,
-		row - 1, col,
-		row - 1, col + 1,
-		row - 1, col - 1,
-		row, col + 1,
-		row, col - 1,
-	}
 	for i := 0; i < len(sur); i += 2 {
-		if sur[i] < 0 || sur[i+1] < 0 || sur[i] > 9 || sur[i+1] > 9 {
+		rowt := row + sur[i]
+		colt := col + sur[i+1]
+		if rowt < 0 || colt < 0 || rowt > 9 || colt > 9 {
 			continue
 		}
-		if !flashed[sur[i]][sur[i+1]] {
-			octomap[sur[i]][sur[i+1]] += 1
-			if octomap[sur[i]][sur[i+1]] > 9 {
-				flashed[sur[i]][sur[i+1]] = true
-				octomap, count, flashed = flashSimu(octomap, sur[i], sur[i+1], flashed, count+1)
+		if !flashed[rowt][colt] {
+			octomap[rowt][colt] += 1
+			if octomap[rowt][colt] > 9 {
+				flashed[rowt][colt] = true
+				octomap, count, flashed = flashSimu(octomap, rowt, colt, flashed, count+1)
 			}
 		}
 	}
