@@ -48,8 +48,8 @@ func problem(steps int) int {
 			a := string(key[0]) + e
 			b := e + string(key[1])
 			// NOTE: adding e count twice, so I have to divide by 2 in the end
-			tmp[a] += 1 + (elem - 1)
-			tmp[b] += 1 + (elem - 1)
+			tmp[a] += elem
+			tmp[b] += elem
 		}
 		formula = tmp
 	}
@@ -63,19 +63,14 @@ func problem(steps int) int {
 	for _, elem := range counter {
 		if elem > greatest {
 			greatest = elem
+			continue
 		}
 		if elem < least {
 			least = elem
+			continue
 		}
 	}
-	if greatest%2 != 0 {
-		greatest += 1
-	}
-	if least%2 != 0 {
-		least += 1
-	}
-
-	return (greatest / 2) - (least / 2)
+	return ((greatest + greatest%2) / 2) - ((least + least%2) / 2)
 }
 
 func main() {
