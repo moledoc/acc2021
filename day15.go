@@ -62,15 +62,6 @@ func dumpPath(grid [][]int, prev []node) {
 	}
 }
 
-func makeVisited() [][]int {
-	var visited [][]int
-	for i := 0; i < gridSize; i++ {
-		row := make([]int, gridSize)
-		visited = append(visited, row)
-	}
-	return visited
-}
-
 func minDist(dist []int, queue []node) (ind int) {
 	unreachable := node{-1, -1, -1}
 	var min int = inf
