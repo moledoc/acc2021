@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 )
 
-var verSum int
 var hexToBin map[string]string = map[string]string{
 	"0": "0000",
 	"1": "0001",
@@ -28,6 +28,8 @@ var hexToBin map[string]string = map[string]string{
 	"E": "1110",
 	"F": "1111",
 }
+var verSum int
+var polish []string
 
 func check(err error) {
 	if err != nil {
@@ -46,7 +48,6 @@ func version(binary string, ptr int) int {
 	ptr += 3
 	ver64, err := strconv.ParseInt(verStr, 2, 64)
 	check(err)
-	// 	fmt.Println("VER", ver64)
 	verSum += int(ver64)
 	return ptr
 }
@@ -66,19 +67,35 @@ func lenTypeId(binary string, ptr int) (int, int) {
 	return int(id64), ptr
 }
 
+// TODO: need to now of how many subpackets each op contains
 func packet(binary string, ptr int) int {
 	var id int
 	var lenType int
 	ptr = version(binary, ptr)
 	id, ptr = typeId(binary, ptr)
-	// 	fmt.Println("HERE", ptr, id)
 	if id == 4 {
-		_, ptr = literal(binary, ptr)
+		ptr = literal(binary, ptr)
 	}
 	if id != 4 {
 		lenType, ptr = lenTypeId(binary, ptr)
-		// 		fmt.Println("HERE2", lenType)
-		// 		if id == 6 && lenType == 0 {
+		var op string
+		switch id {
+		case 0:
+			op = "+"
+		case 1:
+			op = "*"
+		case 2:
+			op = "min"
+		case 3:
+			op = "max"
+		case 5:
+			op = ">"
+		case 6:
+			op = "<"
+		case 7:
+			op = "="
+		}
+		polish = append(polish, op)
 		if lenType == 0 {
 			ptr = operator0(binary, ptr)
 		}
@@ -91,7 +108,7 @@ func packet(binary string, ptr int) int {
 }
 
 // assume that version and typeId are already run
-func literal(binary string, ptr int) (int, int) {
+func literal(binary string, ptr int) int {
 	var stop bool
 	var literalStr string
 	for !stop {
@@ -102,11 +119,10 @@ func literal(binary string, ptr int) (int, int) {
 		}
 		literalStr += part[1:5]
 	}
-	// 	ptr += 3 // skip last 3 bits, because they are for hex representation
 	lit64, err := strconv.ParseInt(literalStr, 2, 64)
-	// 	fmt.Println("LIT", lit64)
 	check(err)
-	return int(lit64), ptr
+	polish = append(polish, fmt.Sprint(lit64))
+	return ptr
 }
 
 func operator0(binary string, ptr int) int {
@@ -115,9 +131,7 @@ func operator0(binary string, ptr int) int {
 	check(err)
 	for i := ptr; ptr-i < int(subPackLen); {
 		ptr = packet(binary, ptr)
-		// 		fmt.Println("HERERER", i, ptr, ptr-i, subPackLen)
 	}
-	//ptr += len(binary) - ptr // ??
 	return ptr
 }
 
@@ -128,12 +142,10 @@ func operator1(binary string, ptr int) int {
 	for i := 0; i < int(subPackCnt); i++ {
 		ptr = packet(binary, ptr)
 	}
-	// 	ptr += len(binary) - ptr // ??
 	return ptr
 }
 
 func problem1() int {
-	//file, err := os.Open("sample.txt")
 	file, err := os.Open("input16.txt")
 	defer file.Close()
 	check(err)
@@ -150,9 +162,125 @@ func problem1() int {
 	return verSum
 }
 
+var ops *regexp.Regexp = regexp.MustCompile("\\+|\\*|min|max|>|<|=")
+
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+func runPolish(pol []string) int {
+	var result int
+	var i int
+	for len(pol) != 1 {
+		fmt.Println(len(pol))
+		// 		fmt.Println()
+		// 		fmt.Println(i, pol)
+		elem := pol[i]
+		if ops.MatchString(pol[i+1]) {
+			pol = append(pol, elem)
+			pol = append(pol[:i], pol[i+1:]...)
+			continue
+		}
+		if elem == "+" {
+			var j int = 1
+			var sum int
+			for ; j < len(pol) && !ops.MatchString(pol[i+j]); j++ {
+				a, err := strconv.Atoi(pol[i+j])
+				check(err)
+				sum += a
+			}
+			pol = append(pol[:i], pol[i+j:]...)
+			// 			pol = append(pol, "+")
+			pol = append(pol, fmt.Sprint(sum))
+			i -= j //- 1
+		}
+		if elem == "*" {
+			var j int = 1
+			var prod int = 1
+			for ; j < len(pol) && !ops.MatchString(pol[i+j]); j++ {
+				a, err := strconv.Atoi(pol[i+j])
+				check(err)
+				prod *= a
+			}
+			pol = append(pol[:i], pol[i+j:]...)
+			// 			pol = append(pol, "*")
+			pol = append(pol, fmt.Sprint(prod))
+			i -= j //- 1
+		}
+		if elem == "min" {
+			var min int = int(^uint(0) >> 1)
+			var j int = 1
+			for ; j < len(pol) && !ops.MatchString(pol[i+j]); j++ {
+				a, err := strconv.Atoi(pol[i+j])
+				check(err)
+				if a < min {
+					min = a
+				}
+			}
+			pol = append(pol[:i], pol[i+j:]...)
+			// 			pol = append(pol, "min")
+			pol = append(pol, fmt.Sprint(min))
+			i -= j //- 1
+		}
+		if elem == "max" {
+			var max int
+			var j int = 1
+			for ; j < len(pol) && !ops.MatchString(pol[i+j]); j++ {
+				a, err := strconv.Atoi(pol[i+j])
+				check(err)
+				if a > max {
+					max = a
+				}
+			}
+			pol = append(pol[:i], pol[i+j:]...)
+			// 			pol = append(pol, "max")
+			pol = append(pol, fmt.Sprint(max))
+			i -= j //- 1
+		}
+		if elem == "<" {
+			a, err := strconv.Atoi(pol[i+1])
+			check(err)
+			b, err := strconv.Atoi(pol[i+2])
+			check(err)
+			pol = append(pol[:i], pol[i+3:]...)
+			pol = append(pol, fmt.Sprint(boolToInt(a < b)))
+			i -= 2
+		}
+		if elem == ">" {
+			a, err := strconv.Atoi(pol[i+1])
+			check(err)
+			b, err := strconv.Atoi(pol[i+2])
+			check(err)
+			pol = append(pol[:i], pol[i+3:]...)
+			pol = append(pol, fmt.Sprint(boolToInt(a > b)))
+			i -= 2
+		}
+		if elem == "=" {
+			a, err := strconv.Atoi(pol[i+1])
+			check(err)
+			b, err := strconv.Atoi(pol[i+2])
+			check(err)
+			pol = append(pol[:i], pol[i+3:]...)
+			pol = append(pol, fmt.Sprint(boolToInt(a == b)))
+			i -= 2
+		}
+		i++
+		if i < 0 {
+			i = 0
+		}
+	}
+	// 	fmt.Println(pol)
+	result, err := strconv.Atoi(pol[0])
+	check(err)
+	return result
+}
+
 func problem2() int {
-	file, err := os.Open("sample.txt")
-	//file, err := os.Open("input16.txt")
+	//file, err := os.Open("sample.txt")
+	file, err := os.Open("input16.txt")
 	defer file.Close()
 	check(err)
 	scanner := bufio.NewScanner(file)
@@ -165,10 +293,11 @@ func problem2() int {
 	}
 	// 	fmt.Println(binary)
 	_ = packet(binary, 0)
-	return verSum
+	fmt.Println(polish)
+	return runPolish(polish)
 }
 
 func main() {
-	fmt.Printf("Problem 1: %v\n", problem1())
-	//     fmt.Printf("Problem 2: %v\n",problem2())
+	//fmt.Printf("Problem 1: %v\n", problem1())
+	fmt.Printf("Problem 2: %v\n", problem2())
 }
