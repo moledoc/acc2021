@@ -82,7 +82,68 @@ func problem1() int {
 	return height
 }
 
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+func abs(a int) int {
+	if a < 0 {
+		return -a
+	}
+	return a
+}
+
+func max(a, b int) int {
+	if a < b {
+		return b
+	}
+	return a
+}
+
+func problem2() int {
+	file, err := os.Open("input17.txt")
+	defer file.Close()
+	check(err)
+	scanner := bufio.NewScanner(file)
+	defer checkScanner(scanner)
+	scanner.Scan()
+	elems := strings.Split(scanner.Text(), "..")
+	x1, err := strconv.Atoi(strings.Split(elems[0], "=")[1])
+	check(err)
+	x2, err := strconv.Atoi(strings.Split(elems[1], ", ")[0])
+	check(err)
+	y1, err := strconv.Atoi(strings.Split(elems[1], "=")[1])
+	check(err)
+	y2, err := strconv.Atoi(elems[2])
+	check(err)
+	var yStart int = -max(abs(y1), abs(y2))
+	var yEnd int = max(abs(y1), abs(y2))
+	var velos int
+	for x := 0; x <= x2; x++ {
+		for y := yStart; y <= yEnd; y++ {
+			yvel := y
+			xvel := x
+			var xpos int
+			var ypos int
+			for i := 0; i < 10000; i++ {
+				xpos += xvel
+				ypos += yvel
+				yvel -= 1
+				xvel += boolToInt(xvel < 0) - boolToInt(xvel > 0)
+				if xpos >= x1 && xpos <= x2 && ypos >= y1 && ypos <= y2 {
+					velos++
+					break
+				}
+			}
+		}
+	}
+	return velos
+}
+
 func main() {
 	fmt.Printf("Problem 1: %v\n", problem1())
-	//fmt.Printf("Problem 2: %v\n", problem2())
+	fmt.Printf("Problem 2: %v\n", problem2())
 }
