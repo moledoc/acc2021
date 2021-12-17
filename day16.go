@@ -67,7 +67,6 @@ func lenTypeId(binary string, ptr int) (int, int) {
 	return int(id64), ptr
 }
 
-// TODO: need to now of how many subpackets each op contains
 func packet(binary string, ptr int) int {
 	var id int
 	var lenType int
@@ -132,6 +131,7 @@ func operator0(binary string, ptr int) int {
 	for i := ptr; ptr-i < int(subPackLen); {
 		ptr = packet(binary, ptr)
 	}
+	polish = append(polish, "|")
 	return ptr
 }
 
@@ -142,6 +142,7 @@ func operator1(binary string, ptr int) int {
 	for i := 0; i < int(subPackCnt); i++ {
 		ptr = packet(binary, ptr)
 	}
+	polish = append(polish, "|")
 	return ptr
 }
 
@@ -171,115 +172,136 @@ func boolToInt(b bool) int {
 	return 0
 }
 
-func runPolish(pol []string) int {
+func parsePolish(pol []string) int {
 	var result int
-	var i int
 	for len(pol) != 1 {
-		fmt.Println(len(pol))
-		// 		fmt.Println()
-		// 		fmt.Println(i, pol)
-		elem := pol[i]
-		if ops.MatchString(pol[i+1]) {
+		elem := pol[0]
+		if ops.MatchString(pol[1]) || elem == "|" {
 			pol = append(pol, elem)
-			pol = append(pol[:i], pol[i+1:]...)
+			pol = append(pol[:0], pol[1:]...)
 			continue
 		}
+		var done bool
 		if elem == "+" {
 			var j int = 1
 			var sum int
-			for ; j < len(pol) && !ops.MatchString(pol[i+j]); j++ {
-				a, err := strconv.Atoi(pol[i+j])
+			for ; j < len(pol) && !ops.MatchString(pol[j]); j++ {
+				if pol[j] == "|" {
+					done = true
+					j++
+					break
+				}
+				a, err := strconv.Atoi(pol[j])
 				check(err)
 				sum += a
 			}
-			pol = append(pol[:i], pol[i+j:]...)
-			// 			pol = append(pol, "+")
+			pol = append(pol[:0], pol[j:]...)
+			if !done {
+				pol = append(pol, "+")
+			}
 			pol = append(pol, fmt.Sprint(sum))
-			i -= j //- 1
+			continue
 		}
 		if elem == "*" {
 			var j int = 1
 			var prod int = 1
-			for ; j < len(pol) && !ops.MatchString(pol[i+j]); j++ {
-				a, err := strconv.Atoi(pol[i+j])
+			for ; j < len(pol) && !ops.MatchString(pol[j]); j++ {
+				if pol[j] == "|" {
+					done = true
+					j++
+					break
+				}
+				a, err := strconv.Atoi(pol[j])
 				check(err)
 				prod *= a
 			}
-			pol = append(pol[:i], pol[i+j:]...)
-			// 			pol = append(pol, "*")
+			pol = append(pol[:0], pol[j:]...)
+			if !done {
+				pol = append(pol, "*")
+			}
 			pol = append(pol, fmt.Sprint(prod))
-			i -= j //- 1
+			continue
 		}
 		if elem == "min" {
 			var min int = int(^uint(0) >> 1)
 			var j int = 1
-			for ; j < len(pol) && !ops.MatchString(pol[i+j]); j++ {
-				a, err := strconv.Atoi(pol[i+j])
+			for ; j < len(pol) && !ops.MatchString(pol[j]); j++ {
+				if pol[j] == "|" {
+					done = true
+					j++
+					break
+				}
+				a, err := strconv.Atoi(pol[j])
 				check(err)
 				if a < min {
 					min = a
 				}
 			}
-			pol = append(pol[:i], pol[i+j:]...)
-			// 			pol = append(pol, "min")
+			pol = append(pol[:0], pol[j:]...)
+			if !done {
+				pol = append(pol, "min")
+			}
 			pol = append(pol, fmt.Sprint(min))
-			i -= j //- 1
+			continue
 		}
 		if elem == "max" {
 			var max int
 			var j int = 1
-			for ; j < len(pol) && !ops.MatchString(pol[i+j]); j++ {
-				a, err := strconv.Atoi(pol[i+j])
+			for ; j < len(pol) && !ops.MatchString(pol[j]); j++ {
+				if pol[j] == "|" {
+					done = true
+					j++
+					break
+				}
+				a, err := strconv.Atoi(pol[j])
 				check(err)
 				if a > max {
 					max = a
 				}
 			}
-			pol = append(pol[:i], pol[i+j:]...)
-			// 			pol = append(pol, "max")
+			pol = append(pol[:0], pol[j:]...)
+			if !done {
+				pol = append(pol, "max")
+			}
 			pol = append(pol, fmt.Sprint(max))
-			i -= j //- 1
+			continue
 		}
 		if elem == "<" {
-			a, err := strconv.Atoi(pol[i+1])
+			a, err := strconv.Atoi(pol[1])
 			check(err)
-			b, err := strconv.Atoi(pol[i+2])
+			b, err := strconv.Atoi(pol[2])
 			check(err)
-			pol = append(pol[:i], pol[i+3:]...)
+			pol = append(pol[:0], pol[3+1:]...) // the +1 for removing |
 			pol = append(pol, fmt.Sprint(boolToInt(a < b)))
-			i -= 2
+			continue
 		}
 		if elem == ">" {
-			a, err := strconv.Atoi(pol[i+1])
+			a, err := strconv.Atoi(pol[1])
 			check(err)
-			b, err := strconv.Atoi(pol[i+2])
+			b, err := strconv.Atoi(pol[2])
 			check(err)
-			pol = append(pol[:i], pol[i+3:]...)
+			pol = append(pol[:0], pol[3+1:]...) // the +1 for removing |
 			pol = append(pol, fmt.Sprint(boolToInt(a > b)))
-			i -= 2
+			continue
 		}
 		if elem == "=" {
-			a, err := strconv.Atoi(pol[i+1])
+			a, err := strconv.Atoi(pol[1])
 			check(err)
-			b, err := strconv.Atoi(pol[i+2])
+			b, err := strconv.Atoi(pol[2])
 			check(err)
-			pol = append(pol[:i], pol[i+3:]...)
+			pol = append(pol[:0], pol[3+1:]...) // the +1 for removing |
 			pol = append(pol, fmt.Sprint(boolToInt(a == b)))
-			i -= 2
+			continue
 		}
-		i++
-		if i < 0 {
-			i = 0
-		}
+		pol = append(pol[:0], pol[1:]...)
+		pol = append(pol, elem)
 	}
-	// 	fmt.Println(pol)
 	result, err := strconv.Atoi(pol[0])
 	check(err)
 	return result
 }
 
 func problem2() int {
-	//file, err := os.Open("sample.txt")
 	file, err := os.Open("input16.txt")
 	defer file.Close()
 	check(err)
@@ -292,12 +314,15 @@ func problem2() int {
 		binary += hexToBin[elem]
 	}
 	// 	fmt.Println(binary)
+
+	var tmp []string
+	polish = tmp
 	_ = packet(binary, 0)
-	fmt.Println(polish)
-	return runPolish(polish)
+	// 	fmt.Println(polish)
+	return parsePolish(polish)
 }
 
 func main() {
-	//fmt.Printf("Problem 1: %v\n", problem1())
+	fmt.Printf("Problem 1: %v\n", problem1())
 	fmt.Printf("Problem 2: %v\n", problem2())
 }
